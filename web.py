@@ -1,3 +1,4 @@
+from flask import Flask, Response, render_template, redirect, url_for, request
 import face_recognition
 import cv2
 import numpy as np
@@ -5,25 +6,18 @@ import os
 import os.path
 import pickle
 from PIL import Image, ImageDraw
-#from prediction import show_prediction_labels_on_image, predict
 
 root_dir = os.getcwd()
 models_dir = os.path.join(root_dir, 'models')
 
 model_path = os.path.join(models_dir, 'knn.pkl')
 
-def predict(X_frame, knn_clf=None, model_path=None, distance_threshold=0.4):
-    """
-    Recognizes faces in given image using a trained KNN classifier
+app = Flask(__name__)
 
-    :param X_frame: frame to do the prediction on.
-    :param knn_clf: (optional) a knn classifier object. if not specified, model_save_path must be specified.
-    :param model_path: (optional) path to a pickled knn classifier. if not specified, model_save_path must be knn_clf.
-    :param distance_threshold: (optional) distance threshold for face classification. the larger it is, the more chance
-           of mis-classifying an unknown person as a known one.
-    :return: a list of names and face locations for the recognized faces in the image: [(name, bounding box), ...].
-        For faces of unrecognized persons, the name 'unknown' will be returned.
-    """
+camera = cv2.VideoCapture(0)
+
+def predict(X_frame, knn_clf=None, model_path=None, distance_threshold=0.4):
+    
     if knn_clf is None and model_path is None:
         raise Exception("Must supply knn classifier either thourgh knn_clf or model_path")
 
@@ -50,13 +44,7 @@ def predict(X_frame, knn_clf=None, model_path=None, distance_threshold=0.4):
 
 
 def show_prediction_labels_on_image(frame, predictions):
-    """
-    Shows the face recognition results visually.
-
-    :param frame: frame to show the predictions on
-    :param predictions: results of the predict function
-    :return opencv suited image to be fitting with cv2.imshow fucntion:
-    """
+    
     pil_image = Image.fromarray(frame)
     draw = ImageDraw.Draw(pil_image)
 
@@ -85,26 +73,44 @@ def show_prediction_labels_on_image(frame, predictions):
     opencvimage = np.array(pil_image)
     return opencvimage
 
+def gen_frames(option=None):  
+    print(option)
+    while True:
+        success, frame = camera.read()  # read the camera frame
 
-# process one frame in every 30 frames for speed
-process_this_frame = 29
-# Get a reference to webcam #0 (the default one)
-video_capture = cv2.VideoCapture(0)
+        if not success:
+            break
+        else:
 
-while True:
-    # Grab a single frame of video
-    ret, frame = video_capture.read()
+            if option is not None: 
+                if option == 'face_rec':
+                    process_this_frame = 29
+                    img = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+                    process_this_frame = process_this_frame + 1
+                    if process_this_frame % 30 == 0:
+                        predictions = predict(img, model_path=model_path)
+                    frame = show_prediction_labels_on_image(frame, predictions)
+            
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')  # concat frame one by one and show result
 
-    if ret:
-            # Different resizing options can be chosen based on desired program runtime.
-            # Image resizing for more stable streaming
-            img = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-            process_this_frame = process_this_frame + 1
-            if process_this_frame % 30 == 0:
-                predictions = predict(img, model_path=model_path)
-            frame = show_prediction_labels_on_image(frame, predictions)
-            cv2.imshow('camera', frame)
-            if ord('q') == cv2.waitKey(10):
-                video_capture.release()
-                cv2.destroyAllWindows()
-                exit(0)
+@app.route('/')
+def index():
+    # return 'Hello World'
+    return render_template('web.html')
+
+@app.route('/video_feed/<option>')
+def video_feed(option):
+    return Response(gen_frames(option), mimetype='multipart/x-mixed-replace; boundary=frame')    
+
+# @app.route('/face_rec')
+# def face_rec():
+#     return redirect(url_for('video_feed',option = 'face_rec'))
+    # return Response(gen_frames(option='face_rec'), mimetype='multipart/x-mixed-replace; boundary=frame') 
+
+if __name__ == '__main__':
+    app.debug = True
+    # app.run()
+    app.run(host="0.0.0.0")

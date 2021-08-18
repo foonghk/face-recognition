@@ -7,14 +7,16 @@ from PIL import Image, ImageDraw
 import face_recognition
 from face_recognition.face_recognition_cli import image_files_in_folder
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'JPG'}
 
 root_dir = os.getcwd()
 models_dir = os.path.join(root_dir, 'models')
 
 model_path = os.path.join(models_dir, 'knn.pkl')
 
-def predict(X_img_path, knn_clf=None, model_path=None, distance_threshold=0.6):
+test_sample_dir = os.path.join(root_dir, 'test_sample')
+
+def predict(X_img_path, knn_clf=None, model_path=None, distance_threshold=0.4):
     """
     Recognizes faces in given image using a trained KNN classifier
 
@@ -87,8 +89,8 @@ def show_prediction_labels_on_image(img_path, predictions):
 
 
 
-for image_file in os.listdir("knn_examples/test"):
-    full_file_path = os.path.join("knn_examples/test", image_file)
+for image_file in os.listdir(test_sample_dir):
+    full_file_path = os.path.join(test_sample_dir, image_file)
 
     print("Looking for faces in {}".format(image_file))
 
@@ -101,4 +103,4 @@ for image_file in os.listdir("knn_examples/test"):
         print("- Found {} at ({}, {})".format(name, left, top))
 
     # Display results overlaid on an image
-    show_prediction_labels_on_image(os.path.join("knn_examples/test", image_file), predictions)
+    show_prediction_labels_on_image(os.path.join(test_sample_dir, image_file), predictions)
