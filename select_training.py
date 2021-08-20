@@ -71,11 +71,6 @@ def train(train_dir, train_id, model_save_path=None, n_neighbors=None, knn_algo=
 
     data = loadData(data_model_path)
 
-    # if os.path.exists(data_model_path):
-    #     # "with" statements are very handy for opening files. 
-    #     with open(data_model_path,'rb') as rfp: 
-    #         data = pickle.load(rfp)
-    # print(data)
     X = []
     y = []
 
@@ -97,19 +92,13 @@ def train(train_dir, train_id, model_save_path=None, n_neighbors=None, knn_algo=
             # Add face encoding for current image to the training set
             X.append(face_recognition.face_encodings(image, known_face_locations=face_bounding_boxes)[0])
             y.append(train_id)
-
-    # print(X)
-    # print(y)
-    # encoding = X,y
-    X = data[0] + X
-    # print(X)
+   
+    X = data[0] + X  
     y = data[1] + y
-    # print(y)
-    # print(X)
-    # print(y)
+    
     data[0] = X
     data[1] = y
-    # print(data)
+    
     storeData(data, data_model_path)
     # Determine how many neighbors to use for weighting in the KNN classifier
     if n_neighbors is None:
@@ -125,7 +114,7 @@ def train(train_dir, train_id, model_save_path=None, n_neighbors=None, knn_algo=
     # Save the trained KNN classifier
     if model_save_path is not None:
         with open(model_save_path, 'wb') as f:
-            # pickle.dump(knn_clf, f)
+            
             pickle.dump(knn_clf, f)
 
     return knn_clf
